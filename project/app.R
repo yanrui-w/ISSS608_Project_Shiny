@@ -8,15 +8,36 @@ library(ggplot2)
 
 # Define UI for application that includes tabs
 ui <- fluidPage(
-  titlePanel("Pupils Examination Results Dashboard"),
+  titlePanel("Electricity Consumption In Singapore"),
+  
+  tags$head(
+    tags$style(HTML("
+      /* Add color to the title panel */
+      .titlePanel {
+        background-color: #3366CC; /* You can use any color code or name */
+        color: white; /* Text color */
+      }
+
+      /* Add color to the tabset panel */
+      .nav-tabs > li.active > a, .nav-tabs > li.active > a:focus, .nav-tabs > li.active > a:hover {
+        background-color: #3366CC; /* Background color of active tab */
+        color: white; /* Text color of active tab */
+      }
+
+      /* Add color to the content area */
+      .tab-content {
+        background-color: #F0F0F0; /* Background color of content area */
+      }
+    "))
+  ),
   
   tabsetPanel(
-    tabPanel("Tab 1", "Content for Tab 1"),
-    tabPanel("Tab 2", "Content for Tab 2"),
-    tabPanel("Tab 3", "Content for Tab 3"),
+    tabPanel("Overview", "Content for Tab 1"),
+    tabPanel("By Dwelling Type", "Content for Tab 2"),
+    tabPanel("By Region", "Content for Tab 3"),
     
     # Tab for Pupils examination results
-    tabPanel("Pupils",
+    tabPanel("Time Series",
              sidebarLayout(
                sidebarPanel(
                  selectInput(inputId = "variable",
