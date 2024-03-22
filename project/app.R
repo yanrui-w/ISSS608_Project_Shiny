@@ -1,10 +1,8 @@
-pacman::p_load(shiny,tidyverse)
+pacman::p_load(shiny,tidyverse,tmap,dplyr,leaflet)
 
-exam <- read_csv("data/Exam_data.csv")
+mpsz_SES_filtered <- read_rds("data/mpsz_SES_filtered.rds")
 
 
-library(shiny)
-library(ggplot2)
 
 # Define UI for application that includes tabs
 ui <- fluidPage(
@@ -31,53 +29,98 @@ ui <- fluidPage(
     "))
   ),
   
+
+
   tabsetPanel(
-    tabPanel("Overview", "Content for Tab 1"),
-    tabPanel("By Dwelling Type", "Content for Tab 2"),
-    tabPanel("By Region", "Content for Tab 3"),
-    
-    # Tab for Pupils examination results
+    tabPanel("Overview",
+             sidebarLayout(
+               sidebarPanel(
+                 # Add inputs for Tab 1
+               ),
+               mainPanel(
+                 # Add outputs for Tab 1
+               )
+             )
+    ),
+    tabPanel("By Dwelling Type",
+             sidebarLayout(
+               sidebarPanel(
+                 # Add inputs for Tab 2
+               ),
+               mainPanel(
+                 # Add outputs for Tab 2
+               )
+             )
+    ),
+    tabPanel("By Region",
+             sidebarLayout(
+               sidebarPanel(
+                 selectInput("dwelling", "Dwelling Type:", choices = unique(mpsz_SES_filtered$dwelling_type)),
+                 selectInput("year", "Year:", choices = unique(mpsz_SES_filtered$year)),
+                 selectInput("month", "Month:", choices = unique(mpsz_SES_filtered$month))
+               ),
+               mainPanel(
+                 uiOutput("map")
+               )
+             )
+    ),
     tabPanel("Time Series",
              sidebarLayout(
                sidebarPanel(
-                 selectInput(inputId = "variable",
-                             label = "Subject:",
-                             choices = c("English" = "ENGLISH",
-                                         "Maths" = "MATHS",
-                                         "Science" = "SCIENCE"),
-                             selected = "ENGLISH"),
-                 sliderInput(inputId = "bins",
-                             label = "Number of Bins",
-                             min = 5,
-                             max = 20,
-                             value= 10)
+                 # Add inputs for Tab 4
                ),
-               mainPanel(plotOutput("distPlot"))
+               mainPanel(
+                 # Add outputs for Tab 4
+               )
              )
     )
   )
 )
 
-# Define server logic for histogram
+# Define server logic
+# Define server logic
 server <- function(input, output) {
-  output$distPlot <- renderPlot({
-    # Sample data for demonstration
-    set.seed(123)
-    exam <- data.frame(
-      ENGLISH = rnorm(100, mean = 70, sd = 10),
-      MATHS = rnorm(100, mean = 65, sd = 8),
-      SCIENCE = rnorm(100, mean = 75, sd = 12)
-    )
+  filtered_data <- reactive({
+    filtered <- mpsz_SES_filtered
+    if (!is.null(input$dwelling)) {
+      filtered <- filtered %>% filter(dwelling_type == input$dwelling)
+    }
+    if (!is.null(input$year)) {
+      filtered <- filtered %>% filter(year == input$year)
+    }
+    if (!is.null(input$month)) {
+      filtered <- filtered %>% filter(month == input$month)
+    }
+    return(filtered)
+  })
+  
+  output$map <- renderUI({
+    req(filtered_data())
+    if (nrow(filtered_data()) == 0) {
+      return(NULL)  # Return NULL if filtered data is empty
+    }
     
-    # Histogram plot
-    ggplot(exam, aes(x = exam[[input$variable]])) +
-      geom_histogram(bins = input$bins,
-                     color = "black",  
-                     fill = "light blue") +
-      labs(x = input$variable, y = "Frequency") +
-      theme_minimal()
-  }) 
+    tmap_mode("view")
+    tmap_options(check.and.fix = TRUE)
+    
+    elecmap <- tm_shape(filtered_data())+
+      tm_fill("kwh_per_acc", 
+              style = "quantile", 
+              palette = "Blues",
+              title = "Electricity Consumption in kwh_per_acc") +
+      tm_layout(main.title = "Total Household Electricity Consumption by Household in 2023",
+                main.title.position = "center",
+                main.title.size = 1.2,
+                legend.height = 0.45, 
+                legend.width = 0.35,
+                frame = TRUE) +
+      tm_borders(alpha = 0.5) +
+      tm_scale_bar() +
+      tm_grid(alpha =0.2)
+    
+    print(elecmap)
+  })
 }
 
-# Run the application 
+# Run the application
 shinyApp(ui = ui, server = server)

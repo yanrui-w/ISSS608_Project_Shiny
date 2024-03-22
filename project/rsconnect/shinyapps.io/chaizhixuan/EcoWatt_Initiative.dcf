@@ -5,7 +5,7 @@ account: chaizhixuan
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 11457415
-bundleId: 8390178
+bundleId: 8405811
 url: https://chaizhixuan.shinyapps.io/EcoWatt_Initiative/
 version: 1
 asMultiple: FALSE
