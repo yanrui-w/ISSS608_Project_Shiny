@@ -1,0 +1,13 @@
+name: project
+title: project
+username: chaizhixuan
+account: chaizhixuan
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 11570696
+bundleId: 8408979
+url: https://chaizhixuan.shinyapps.io/project/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: .RData
