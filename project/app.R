@@ -107,12 +107,13 @@ server <- function(input, output) {
     tmap_mode("view")
     tmap_options(check.and.fix = TRUE)
     
-    elecmap <- tm_shape(filtered_data())+
+    elecmap <- tm_shape(filtered_data()) +
       tm_fill("kwh_per_acc", 
               style = "quantile", 
               palette = "Blues",
-              title = "Electricity Consumption in kwh_per_acc") +
-      tm_layout(main.title = "Total Household Electricity Consumption by Household in 2023",
+              title = "Electricity Consumption by Percentile") +
+      tm_facets(by = c("year", "month"), ncol = 4) +  # Facet by year and month
+      tm_layout(main.title = "Total Household Electricity Consumption by Percentile",
                 main.title.position = "center",
                 main.title.size = 1.2,
                 legend.height = 0.45, 
@@ -120,10 +121,11 @@ server <- function(input, output) {
                 frame = TRUE) +
       tm_borders(alpha = 0.5) +
       tm_scale_bar() +
-      tm_grid(alpha =0.2)
+      tm_grid(alpha = 0.2)
     
     print(elecmap)
   })
+  
 }
 
 # Run the application
