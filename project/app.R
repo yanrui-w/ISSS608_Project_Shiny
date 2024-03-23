@@ -4,7 +4,7 @@ library(tmap)
 library(dplyr)
 
 
-mpsz_SES_filtered <- read_rds("data/mpsz_SES_filtered.rds")
+mpsz_SES_filtered <- read_rds("data/mpsz_SES_filtered_1.rds")
 
 
 
