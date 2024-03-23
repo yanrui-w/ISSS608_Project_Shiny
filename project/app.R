@@ -1,4 +1,8 @@
-pacman::p_load(shiny,tidyverse,tmap,dplyr,leaflet)
+library(shiny)
+library(tidyverse)
+library(tmap)
+library(dplyr)
+
 
 mpsz_SES_filtered <- read_rds("data/mpsz_SES_filtered.rds")
 
