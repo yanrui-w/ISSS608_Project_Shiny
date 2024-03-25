@@ -2,9 +2,15 @@ library(shiny)
 library(tidyverse)
 library(tmap)
 library(dplyr)
+library(fable)
+library(tsibble)
+library(ggplot2)
+library(lubridate)  # For year() and month() functions
+library(feasts)
 
 
 mpsz_SES_filtered <- read_rds("data/mpsz_SES_filtered_1.rds")
+data <- readRDS("data/SEO_TS.rds")
 
 
 
@@ -71,17 +77,23 @@ ui <- fluidPage(
     tabPanel("Time Series",
              sidebarLayout(
                sidebarPanel(
-                 # Add inputs for Tab 4
+                 selectInput("dwelling", "Region:", choices = unique(data$DWELLING_TYPE)),
+                 numericInput("forecast_months", "Number of Months to Forecast:", min = 1, max = 120, value = 12),
+                 selectInput("selected_model", "Select Model:", choices = c("ETS", "ARIMA")),
+                 actionButton("submit", "Submit")
                ),
                mainPanel(
-                 # Add outputs for Tab 4
+                 plotOutput("consumption_plot"),
+                 textOutput("mape_output"),
+                 textOutput("mae_output")
                )
              )
     )
   )
 )
 
-# Define server logic
+
+
 # Define server logic
 server <- function(input, output) {
   filtered_data <- reactive({
@@ -101,7 +113,7 @@ server <- function(input, output) {
   output$map <- renderUI({
     req(filtered_data())
     if (nrow(filtered_data()) == 0) {
-      return(NULL)  # Return NULL if filtered data is empty
+      return(NULL)
     }
     
     tmap_mode("view")
@@ -112,7 +124,7 @@ server <- function(input, output) {
               style = "quantile", 
               palette = "Blues",
               title = "Electricity Consumption by Percentile") +
-      tm_facets(by = c("year", "month"), ncol = 4) +  # Facet by year and month
+      tm_facets(by = c("year", "month"), ncol = 4) +
       tm_layout(main.title = "Total Household Electricity Consumption by Percentile",
                 main.title.position = "center",
                 main.title.size = 1.2,
@@ -126,6 +138,85 @@ server <- function(input, output) {
     print(elecmap)
   })
   
+  # Initialize reactiveValues to store filtered data
+  data_filtered <- reactiveValues()
+  
+  # Update filtered data when submit button is clicked
+  observeEvent(input$submit, {
+    data_filtered$filtered_data <- data %>%
+      filter(DWELLING_TYPE == input$dwelling)
+  })
+  
+  # Function to calculate forecasts
+  calculate_forecasts <- function(data, method, h) {
+    data_ts <- tsibble(
+      Month_Year = yearmonth(paste(data$year, data$month)),
+      DWELLING_TYPE = data$DWELLING_TYPE,
+      Consumption_GWh = data$consumption_GWh,
+      index = Month_Year
+    )
+    
+    fit <- data_ts %>%
+      model(method = method)
+    fc <- fit %>%
+      forecast(h = h)
+    return(fc)
+  }
+  
+  # Reactive expression to generate forecasts
+  forecasts <- reactive({
+    # Check if filtered data is available
+    if (is.null(data_filtered$filtered_data)) {
+      return(NULL)
+    }
+    
+    # Calculate forecasts using selected method
+    method <- switch(input$selected_model,
+                     "ETS" = ETS(Consumption_GWh ~ error("A") + trend("N") + season("N")),
+                     "ARIMA" = ARIMA(Consumption_GWh))
+    calculate_forecasts(data_filtered$filtered_data, method, input$forecast_months)
+  })
+  
+  # Output plot
+  output$consumption_plot <- renderPlot({
+    if (!is.null(forecasts())) {
+      autoplot(forecasts())
+    } else {
+      plot(NULL, xlim = c(1, input$forecast_months), ylim = c(0, 1), 
+           xlab = "Month", ylab = "Consumption (GWh)", 
+           main = "Please click submit to generate forecast")
+    }
+  })
+  
+  # Output MAPE
+  output$mape_output <- renderText({
+    if (!is.null(forecasts())) {
+      actual_data <- na.omit(data_filtered$filtered_data$consumption_GWh)
+      forecast_data <- as.numeric(na.omit(forecasts()$point_forecast))
+      if (length(actual_data) == 0 || length(forecast_data) == 0) {
+        return("MAPE: N/A")
+      }
+      mape <- mean(abs((actual_data - forecast_data) / actual_data)) * 100
+      paste("MAPE:", round(mape, 2), "%")
+    } else {
+      "MAPE: N/A"
+    }
+  })
+  
+  # Output MAE
+  output$mae_output <- renderText({
+    if (!is.null(forecasts())) {
+      actual_data <- na.omit(data_filtered$filtered_data$consumption_GWh)
+      forecast_data <- as.numeric(na.omit(forecasts()$point_forecast))
+      if (length(actual_data) == 0 || length(forecast_data) == 0) {
+        return("MAE: N/A")
+      }
+      mae <- mean(abs(actual_data - forecast_data))
+      paste("MAE:", round(mae, 2))
+    } else {
+      "MAE: N/A"
+    }
+  })
 }
 
 # Run the application
