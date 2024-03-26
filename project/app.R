@@ -39,8 +39,6 @@ ui <- fluidPage(
     "))
   ),
   
-
-
   tabsetPanel(
     tabPanel("Overview",
              sidebarLayout(
@@ -67,7 +65,29 @@ ui <- fluidPage(
                sidebarPanel(
                  selectInput("dwelling", "Dwelling Type:", choices = unique(mpsz_SES_filtered$dwelling_type)),
                  selectInput("year", "Year:", choices = unique(mpsz_SES_filtered$year)),
-                 selectInput("month", "Month:", choices = unique(mpsz_SES_filtered$month))
+                 selectInput("month", "Month:", choices = unique(mpsz_SES_filtered$month)),
+                 selectInput(inputId = "classification",
+                             label = "Classification method:",
+                             choices = list("sd" = "sd", 
+                                            "equal" = "equal", 
+                                            "pretty" = "pretty", 
+                                            "quantile" = "quantile", 
+                                            "kmeans" = "kmeans", 
+                                            "hclust" = "hclust", 
+                                            "bclust" = "bclust", 
+                                            "fisher" = "fisher", 
+                                            "jenks" = "jenks"),
+                             selected = "pretty"),
+                 selectInput(inputId = "colour",
+                             label = "Colour scheme:",
+                             choices = list("blues" = "Blues", 
+                                            "reds" = "Reds", 
+                                            "greens" = "Greens",
+                                            "Yellow-Orange-Red" = "YlOrRd",
+                                            "Yellow-Orange-Brown" = "YlOrBr",
+                                            "Yellow-Green" = "YlGn",
+                                            "Orange-Red" = "OrRd"),
+                             selected = "YlOrRd")
                ),
                mainPanel(
                  uiOutput("map")
@@ -91,8 +111,6 @@ ui <- fluidPage(
     )
   )
 )
-
-
 
 # Define server logic
 server <- function(input, output) {
@@ -121,8 +139,8 @@ server <- function(input, output) {
     
     elecmap <- tm_shape(filtered_data()) +
       tm_fill("kwh_per_acc", 
-              style = "quantile", 
-              palette = "Blues",
+              style = input$classification,  # Use the selected classification method
+              palette = input$colour,  # Use the selected color scheme
               title = "Electricity Consumption by Percentile") +
       tm_facets(by = c("year", "month"), ncol = 4) +
       tm_layout(main.title = "Total Household Electricity Consumption by Percentile",
@@ -221,3 +239,5 @@ server <- function(input, output) {
 
 # Run the application
 shinyApp(ui = ui, server = server)
+
+
