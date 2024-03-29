@@ -7,10 +7,15 @@ library(tsibble)
 library(ggplot2)
 library(lubridate)  # For year() and month() functions
 library(feasts)
+library(plotly)
+library(xts)
+library(ggthemes)
+library(hrbrthemes)
 
 
 mpsz_SES_filtered <- read_rds("data/mpsz_SES_filtered_1.rds")
 data <- readRDS("data/SEO_TS.rds")
+data1 <- readRDS("data/helectricity.rds")
 
 
 
@@ -53,10 +58,11 @@ ui <- fluidPage(
     tabPanel("By Dwelling Type",
              sidebarLayout(
                sidebarPanel(
-                 # Add inputs for Tab 2
+                 selectInput("dwelling", "Dwelling Type",
+                             choices = unique(data1$dwellingtype))
                ),
                mainPanel(
-                 # Add outputs for Tab 2
+                 tabPanel("Monthly Plot", plotlyOutput("monthlyPlot"))
                )
              )
     ),
@@ -128,6 +134,8 @@ server <- function(input, output) {
     return(filtered)
   })
   
+  #Geospatial_Analysis
+  
   output$map <- renderUI({
     req(filtered_data())
     if (nrow(filtered_data()) == 0) {
@@ -155,6 +163,8 @@ server <- function(input, output) {
     
     print(elecmap)
   })
+  
+  #Time_Series
   
   # Initialize reactiveValues to store filtered data
   data_filtered <- reactiveValues()
@@ -235,9 +245,28 @@ server <- function(input, output) {
       "MAE: N/A"
     }
   })
+  
+  #Dwelling_Type_Plot
+  
+  filtered_data_1 <- reactive({
+    data1 %>% filter(dwellingtype == input$dwelling)
+  })
+  
+  ts_data <- reactive({
+    xts(filtered_data_1()[,c("consumptionGWh")], order.by=as.Date(filtered_data_1()$tdate))
+  })
+  
+  output$monthlyPlot <- renderPlotly({
+    p <- ggplot(ts_data(), aes(x = Index, y = consumptionGWh)) + 
+      geom_line() + theme_clean() +
+      labs(title = "Monthly Household Electricity Consumption", caption = "Data from EMA") +
+      xlab("Month-Year") +
+      ylab("Consumption in GWh") +
+      theme_ipsum_rc()
+    ggplotly(p)
+  })
 }
 
 # Run the application
 shinyApp(ui = ui, server = server)
-
 
